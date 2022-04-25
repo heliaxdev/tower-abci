@@ -38,6 +38,10 @@ pub use pb::RequestPrepareProposal as PrepareProposal;
 pub use pb::RequestExtendVote as ExtendVote;
 #[doc(inline)]
 pub use pb::RequestVerifyVoteExtension as VerifyVoteExtension;
+#[doc(inline)]
+pub use pb::RequestProcessProposal as ProcessProposal;
+#[doc(inline)]
+pub use pb::RequestFinalizeBlock as FinalizeBlock;
 
 /// An ABCI request.
 #[derive(Clone, PartialEq, Debug)]
@@ -57,8 +61,10 @@ pub enum Request {
     LoadSnapshotChunk(LoadSnapshotChunk),
     ApplySnapshotChunk(ApplySnapshotChunk),
     PrepareProposal(PrepareProposal),
+    ProcessProposal(ProcessProposal),
     ExtendVote(ExtendVote),
     VerifyVoteExtension(VerifyVoteExtension),
+    FinalizeBlock(FinalizeBlock),
 }
 
 impl Request {
@@ -73,8 +79,10 @@ impl Request {
             EndBlock(_) => MethodKind::Consensus,
             Commit(_) => MethodKind::Consensus,
             PrepareProposal(_) => MethodKind::Consensus,
+            ProcessProposal(_) => MethodKind::Consensus,
             ExtendVote(_) => MethodKind::Consensus,
             VerifyVoteExtension(_) => MethodKind::Consensus,
+            FinalizeBlock(_) => MethodKind::Consensus,
             CheckTx(_) => MethodKind::Mempool,
             ListSnapshots(_) => MethodKind::Snapshot,
             OfferSnapshot(_) => MethodKind::Snapshot,
@@ -108,8 +116,10 @@ impl TryFrom<pb::Request> for Request {
             Some(Value::LoadSnapshotChunk(x)) => Ok(Request::LoadSnapshotChunk(x)),
             Some(Value::ApplySnapshotChunk(x)) => Ok(Request::ApplySnapshotChunk(x)),
             Some(Value::PrepareProposal(x)) => Ok(Request::PrepareProposal(x)),
+            Some(Value::ProcessProposal(x)) => Ok(Request::ProcessProposal(x)),
             Some(Value::ExtendVote(x)) => Ok(Request::ExtendVote(x)),
             Some(Value::VerifyVoteExtension(x)) => Ok(Request::VerifyVoteExtension(x)),
+            Some(Value::FinalizeBlock(x)) => Ok(Request::FinalizeBlock(x)),
             None => Err("no request in proto"),
         }
     }
@@ -134,8 +144,10 @@ impl Into<pb::Request> for Request {
             Request::LoadSnapshotChunk(x) => Some(Value::LoadSnapshotChunk(x)),
             Request::ApplySnapshotChunk(x) => Some(Value::ApplySnapshotChunk(x)),
             Request::PrepareProposal(x) => Some(Value::PrepareProposal(x)),
+            Request::ProcessProposal(x) => Some(Value::ProcessProposal(x)),
             Request::ExtendVote(x) => Some(Value::ExtendVote(x)),
             Request::VerifyVoteExtension(x) => Some(Value::VerifyVoteExtension(x)),
+            Request::FinalizeBlock(x) => Some(Value::FinalizeBlock(x)),
         };
         pb::Request { value }
     }
@@ -150,8 +162,10 @@ pub enum ConsensusRequest {
     EndBlock(EndBlock),
     Commit(Commit),
     PrepareProposal(PrepareProposal),
+    ProcessProposal(ProcessProposal),
     ExtendVote(ExtendVote),
     VerifyVoteExtension(VerifyVoteExtension),
+    FinalizeBlock(FinalizeBlock),
 }
 
 impl From<ConsensusRequest> for Request {
@@ -163,8 +177,10 @@ impl From<ConsensusRequest> for Request {
             ConsensusRequest::EndBlock(x) => Self::EndBlock(x),
             ConsensusRequest::Commit(x) => Self::Commit(x),
             ConsensusRequest::PrepareProposal(x) => Self::PrepareProposal(x),
+            ConsensusRequest::ProcessProposal(x) => Self::ProcessProposal(x),
             ConsensusRequest::ExtendVote(x) => Self::ExtendVote(x),
             ConsensusRequest::VerifyVoteExtension(x) => Self::VerifyVoteExtension(x),
+            ConsensusRequest::FinalizeBlock(x) => Self::FinalizeBlock(x),
         }
     }
 }
@@ -179,8 +195,10 @@ impl TryFrom<Request> for ConsensusRequest {
             Request::EndBlock(x) => Ok(Self::EndBlock(x)),
             Request::Commit(x) => Ok(Self::Commit(x)),
             Request::PrepareProposal(x) => Ok(Self::PrepareProposal(x)),
+            Request::ProcessProposal(x) => Ok(Self::ProcessProposal(x)),
             Request::ExtendVote(x) => Ok(Self::ExtendVote(x)),
             Request::VerifyVoteExtension(x) => Ok(Self::VerifyVoteExtension(x)),
+            Request::FinalizeBlock(x) => Ok(Self::FinalizeBlock(x)),
             _ => Err("wrong request type"),
         }
     }
