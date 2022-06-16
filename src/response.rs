@@ -5,17 +5,11 @@ use tendermint_proto::abci as pb;
 #[doc(inline)]
 pub use pb::ResponseApplySnapshotChunk as ApplySnapshotChunk;
 #[doc(inline)]
-pub use pb::ResponseBeginBlock as BeginBlock;
-#[doc(inline)]
 pub use pb::ResponseCheckTx as CheckTx;
 #[doc(inline)]
 pub use pb::ResponseCommit as Commit;
 #[doc(inline)]
-pub use pb::ResponseDeliverTx as DeliverTx;
-#[doc(inline)]
 pub use pb::ResponseEcho as Echo;
-#[doc(inline)]
-pub use pb::ResponseEndBlock as EndBlock;
 #[doc(inline)]
 pub use pb::ResponseException as Exception;
 #[doc(inline)]
@@ -52,10 +46,7 @@ pub enum Response {
     Info(Info),
     InitChain(InitChain),
     Query(Query),
-    BeginBlock(BeginBlock),
     CheckTx(CheckTx),
-    DeliverTx(DeliverTx),
-    EndBlock(EndBlock),
     Commit(Commit),
     ListSnapshots(ListSnapshots),
     OfferSnapshot(OfferSnapshot),
@@ -78,10 +69,7 @@ impl Into<pb::Response> for Response {
             Response::Info(x) => Value::Info(x),
             Response::InitChain(x) => Value::InitChain(x),
             Response::Query(x) => Value::Query(x),
-            Response::BeginBlock(x) => Value::BeginBlock(x),
             Response::CheckTx(x) => Value::CheckTx(x),
-            Response::DeliverTx(x) => Value::DeliverTx(x),
-            Response::EndBlock(x) => Value::EndBlock(x),
             Response::Commit(x) => Value::Commit(x),
             Response::ListSnapshots(x) => Value::ListSnapshots(x),
             Response::OfferSnapshot(x) => Value::OfferSnapshot(x),
@@ -101,9 +89,6 @@ impl Into<pb::Response> for Response {
 #[derive(Clone, PartialEq, Debug)]
 pub enum ConsensusResponse {
     InitChain(InitChain),
-    BeginBlock(BeginBlock),
-    DeliverTx(DeliverTx),
-    EndBlock(EndBlock),
     Commit(Commit),
     PrepareProposal(PrepareProposal),
     ProcessProposal(ProcessProposal),
@@ -116,9 +101,6 @@ impl From<ConsensusResponse> for Response {
     fn from(req: ConsensusResponse) -> Self {
         match req {
             ConsensusResponse::InitChain(x) => Self::InitChain(x),
-            ConsensusResponse::BeginBlock(x) => Self::BeginBlock(x),
-            ConsensusResponse::DeliverTx(x) => Self::DeliverTx(x),
-            ConsensusResponse::EndBlock(x) => Self::EndBlock(x),
             ConsensusResponse::Commit(x) => Self::Commit(x),
             ConsensusResponse::PrepareProposal(x) => Self::PrepareProposal(x),
             ConsensusResponse::ProcessProposal(x) => Self::ProcessProposal(x),
@@ -136,9 +118,6 @@ impl TryFrom<Response> for ConsensusResponse {
             Response::InitChain(x) => Ok(Self::InitChain(x)),
             Response::PrepareProposal(x) => Ok(Self::PrepareProposal(x)),
             Response::ProcessProposal(x) => Ok(Self::ProcessProposal(x)),
-            Response::BeginBlock(x) => Ok(Self::BeginBlock(x)),
-            Response::DeliverTx(x) => Ok(Self::DeliverTx(x)),
-            Response::EndBlock(x) => Ok(Self::EndBlock(x)),
             Response::Commit(x) => Ok(Self::Commit(x)),
             Response::ExtendVote(x) => Ok(Self::ExtendVote(x)),
             Response::VerifyVoteExtension(x) => Ok(Self::VerifyVoteExtension(x)),
