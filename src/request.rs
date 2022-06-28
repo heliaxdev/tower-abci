@@ -7,11 +7,17 @@ use crate::MethodKind;
 #[doc(inline)]
 pub use pb::RequestApplySnapshotChunk as ApplySnapshotChunk;
 #[doc(inline)]
+pub use pb::RequestBeginBlock as BeginBlock;
+#[doc(inline)]
 pub use pb::RequestCheckTx as CheckTx;
 #[doc(inline)]
 pub use pb::RequestCommit as Commit;
 #[doc(inline)]
+pub use pb::RequestDeliverTx as DeliverTx;
+#[doc(inline)]
 pub use pb::RequestEcho as Echo;
+#[doc(inline)]
+pub use pb::RequestEndBlock as EndBlock;
 #[doc(inline)]
 pub use pb::RequestFlush as Flush;
 #[doc(inline)]
@@ -45,7 +51,10 @@ pub enum Request {
     Info(Info),
     InitChain(InitChain),
     Query(Query),
+    BeginBlock(BeginBlock),
     CheckTx(CheckTx),
+    DeliverTx(DeliverTx),
+    EndBlock(EndBlock),
     Commit(Commit),
     ListSnapshots(ListSnapshots),
     OfferSnapshot(OfferSnapshot),
@@ -65,6 +74,9 @@ impl Request {
         match self {
             Flush(_) => MethodKind::Flush,
             InitChain(_) => MethodKind::Consensus,
+            BeginBlock(_) => MethodKind::Consensus,
+            DeliverTx(_) => MethodKind::Consensus,
+            EndBlock(_) => MethodKind::Consensus,
             Commit(_) => MethodKind::Consensus,
             PrepareProposal(_) => MethodKind::Consensus,
             ProcessProposal(_) => MethodKind::Consensus,
@@ -94,7 +106,10 @@ impl TryFrom<pb::Request> for Request {
             Some(Value::Info(x)) => Ok(Request::Info(x)),
             Some(Value::InitChain(x)) => Ok(Request::InitChain(x)),
             Some(Value::Query(x)) => Ok(Request::Query(x)),
+            Some(Value::BeginBlock(x)) => Ok(Request::BeginBlock(x)),
             Some(Value::CheckTx(x)) => Ok(Request::CheckTx(x)),
+            Some(Value::DeliverTx(x)) => Ok(Request::DeliverTx(x)),
+            Some(Value::EndBlock(x)) => Ok(Request::EndBlock(x)),
             Some(Value::Commit(x)) => Ok(Request::Commit(x)),
             Some(Value::ListSnapshots(x)) => Ok(Request::ListSnapshots(x)),
             Some(Value::OfferSnapshot(x)) => Ok(Request::OfferSnapshot(x)),
@@ -119,7 +134,10 @@ impl Into<pb::Request> for Request {
             Request::Info(x) => Some(Value::Info(x)),
             Request::InitChain(x) => Some(Value::InitChain(x)),
             Request::Query(x) => Some(Value::Query(x)),
+            Request::BeginBlock(x) => Some(Value::BeginBlock(x)),
             Request::CheckTx(x) => Some(Value::CheckTx(x)),
+            Request::DeliverTx(x) => Some(Value::DeliverTx(x)),
+            Request::EndBlock(x) => Some(Value::EndBlock(x)),
             Request::Commit(x) => Some(Value::Commit(x)),
             Request::ListSnapshots(x) => Some(Value::ListSnapshots(x)),
             Request::OfferSnapshot(x) => Some(Value::OfferSnapshot(x)),
@@ -139,6 +157,9 @@ impl Into<pb::Request> for Request {
 #[derive(Clone, PartialEq, Debug)]
 pub enum ConsensusRequest {
     InitChain(InitChain),
+    BeginBlock(BeginBlock),
+    DeliverTx(DeliverTx),
+    EndBlock(EndBlock),
     Commit(Commit),
     PrepareProposal(PrepareProposal),
     ProcessProposal(ProcessProposal),
@@ -151,6 +172,9 @@ impl From<ConsensusRequest> for Request {
     fn from(req: ConsensusRequest) -> Self {
         match req {
             ConsensusRequest::InitChain(x) => Self::InitChain(x),
+            ConsensusRequest::BeginBlock(x) => Self::BeginBlock(x),
+            ConsensusRequest::DeliverTx(x) => Self::DeliverTx(x),
+            ConsensusRequest::EndBlock(x) => Self::EndBlock(x),
             ConsensusRequest::Commit(x) => Self::Commit(x),
             ConsensusRequest::PrepareProposal(x) => Self::PrepareProposal(x),
             ConsensusRequest::ProcessProposal(x) => Self::ProcessProposal(x),
@@ -166,6 +190,9 @@ impl TryFrom<Request> for ConsensusRequest {
     fn try_from(req: Request) -> Result<Self, Self::Error> {
         match req {
             Request::InitChain(x) => Ok(Self::InitChain(x)),
+            Request::BeginBlock(x) => Ok(Self::BeginBlock(x)),
+            Request::DeliverTx(x) => Ok(Self::DeliverTx(x)),
+            Request::EndBlock(x) => Ok(Self::EndBlock(x)),
             Request::Commit(x) => Ok(Self::Commit(x)),
             Request::PrepareProposal(x) => Ok(Self::PrepareProposal(x)),
             Request::ProcessProposal(x) => Ok(Self::ProcessProposal(x)),
