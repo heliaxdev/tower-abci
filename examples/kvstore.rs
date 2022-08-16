@@ -12,7 +12,7 @@ use structopt::StructOpt;
 use tendermint_proto::abci as pb;
 use tower::{Service, ServiceBuilder};
 
-use tower_abci::{split, BoxError, Request, Response, Server};
+use tower_abci::{split, BoxError, response, Request, Response, Server};
 
 /// In-memory, hashmap-backed key-value store ABCI application.
 #[derive(Clone, Debug)]
@@ -39,7 +39,10 @@ impl Service<Request> for KVStore {
             Request::Info(_) => Response::Info(self.info()),
             Request::Query(query) => Response::Query(self.query(query.data)),
             Request::Commit(_) => Response::Commit(self.commit()),
-            Request::ProcessProposal(_) => Response::ProcessProposal(Default::default()),
+            Request::ProcessProposal(_) => Response::ProcessProposal(response::ProcessProposal{
+                status: 1,
+                ..Default::default()
+            }),
             Request::FinalizeBlock(_) => Response::FinalizeBlock(Default::default()),
             // unhandled messages
             Request::Echo(_) => Response::Echo(Default::default()),
@@ -76,7 +79,7 @@ impl KVStore {
             version: "0.1.0".to_string(),
             app_version: 1,
             last_block_height: self.height as i64,
-            last_block_app_hash: self.app_hash.to_vec(),
+            last_block_app_hash: vec![],
         }
     }
 
