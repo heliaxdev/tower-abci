@@ -66,7 +66,9 @@ impl Service<Request> for KVStore {
                     ..Default::default()
                 })
             }
-            Request::ExtendVote(_) => Response::ExtendVote(Default::default()),
+            Request::ExtendVote(_) => Response::ExtendVote(response::ExtendVote{
+                vote_extension: vec![42;10]
+            }),
             Request::VerifyVoteExtension(_) => Response::VerifyVoteExtension(Default::default()),
         };
         tracing::info!(?rsp);
