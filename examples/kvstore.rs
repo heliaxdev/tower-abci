@@ -10,6 +10,7 @@ use std::{
 use futures::future::FutureExt;
 use structopt::StructOpt;
 use tendermint_proto::abci as pb;
+use tendermint_proto::abci::tx_record::TxAction;
 use tower::{Service, ServiceBuilder};
 
 use tower_abci::{split, BoxError, response, Request, Response, Server};
@@ -53,7 +54,18 @@ impl Service<Request> for KVStore {
             Request::OfferSnapshot(_) => Response::OfferSnapshot(Default::default()),
             Request::LoadSnapshotChunk(_) => Response::LoadSnapshotChunk(Default::default()),
             Request::ApplySnapshotChunk(_) => Response::ApplySnapshotChunk(Default::default()),
-            Request::PrepareProposal(_) => Response::PrepareProposal(Default::default()),
+            Request::PrepareProposal(req) => {
+                Response::PrepareProposal(response::PrepareProposal{
+                    tx_records: req.txs
+                        .into_iter()
+                        .map(|tx| pb::TxRecord {
+                            action: TxAction::Unmodified as i32,
+                            tx,
+                        })
+                        .collect(),
+                    ..Default::default()
+                })
+            }
             Request::ExtendVote(_) => Response::ExtendVote(Default::default()),
             Request::VerifyVoteExtension(_) => Response::VerifyVoteExtension(Default::default()),
         };
