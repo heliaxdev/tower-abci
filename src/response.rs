@@ -31,11 +31,11 @@ pub use pb::ResponsePrepareProposal as PrepareProposal;
 #[doc(inline)]
 pub use pb::ResponseProcessProposal as ProcessProposal;
 #[doc(inline)]
-pub use pb::ResponseExtendVote as ExtendVote;
+pub use pb::ResponseBeginBlock as BeginBlock;
 #[doc(inline)]
-pub use pb::ResponseVerifyVoteExtension as VerifyVoteExtension;
+pub use pb::ResponseDeliverTx as DeliverTx;
 #[doc(inline)]
-pub use pb::ResponseFinalizeBlock as FinalizeBlock;
+pub use pb::ResponseEndBlock as EndBlock;
 
 /// An ABCI response.
 #[derive(Debug, Clone)]
@@ -54,9 +54,9 @@ pub enum Response {
     ApplySnapshotChunk(ApplySnapshotChunk),
     PrepareProposal(PrepareProposal),
     ProcessProposal(ProcessProposal),
-    ExtendVote(ExtendVote),
-    VerifyVoteExtension(VerifyVoteExtension),
-    FinalizeBlock(FinalizeBlock),
+    BeginBlock(BeginBlock),
+    DeliverTx(DeliverTx),
+    EndBlock(EndBlock)
 }
 
 impl Into<pb::Response> for Response {
@@ -77,9 +77,9 @@ impl Into<pb::Response> for Response {
             Response::ApplySnapshotChunk(x) => Value::ApplySnapshotChunk(x),
             Response::PrepareProposal(x) => Value::PrepareProposal(x),
             Response::ProcessProposal(x) => Value::ProcessProposal(x),
-            Response::ExtendVote(x) => Value::ExtendVote(x),
-            Response::VerifyVoteExtension(x) => Value::VerifyVoteExtension(x),
-            Response::FinalizeBlock(x) => Value::FinalizeBlock(x),
+            Response::BeginBlock(x) => Value::BeginBlock(x),
+            Response::DeliverTx(x) => Value::DeliverTx(x),
+            Response::EndBlock(x) => Value::EndBlock(x),
         });
         pb::Response { value }
     }
@@ -92,9 +92,9 @@ pub enum ConsensusResponse {
     Commit(Commit),
     PrepareProposal(PrepareProposal),
     ProcessProposal(ProcessProposal),
-    ExtendVote(ExtendVote),
-    VerifyVoteExtension(VerifyVoteExtension),
-    FinalizeBlock(FinalizeBlock),
+    BeginBlock(BeginBlock),
+    DeliverTx(DeliverTx),
+    EndBlock(EndBlock),
 }
 
 impl From<ConsensusResponse> for Response {
@@ -104,9 +104,9 @@ impl From<ConsensusResponse> for Response {
             ConsensusResponse::Commit(x) => Self::Commit(x),
             ConsensusResponse::PrepareProposal(x) => Self::PrepareProposal(x),
             ConsensusResponse::ProcessProposal(x) => Self::ProcessProposal(x),
-            ConsensusResponse::ExtendVote(x) => Self::ExtendVote(x),
-            ConsensusResponse::VerifyVoteExtension(x) => Self::VerifyVoteExtension(x),
-            ConsensusResponse::FinalizeBlock(x) => Self::FinalizeBlock(x),
+            ConsensusResponse::BeginBlock(x) => Self::BeginBlock(x),
+            ConsensusResponse::DeliverTx(x) => Self::DeliverTx(x),
+            ConsensusResponse::EndBlock(x) => Self::EndBlock(x),
         }
     }
 }
@@ -118,10 +118,10 @@ impl TryFrom<Response> for ConsensusResponse {
             Response::InitChain(x) => Ok(Self::InitChain(x)),
             Response::PrepareProposal(x) => Ok(Self::PrepareProposal(x)),
             Response::ProcessProposal(x) => Ok(Self::ProcessProposal(x)),
+            Response::BeginBlock(x) => Ok(Self::BeginBlock(x)),
+            Response::DeliverTx(x) => Ok(Self::DeliverTx(x)),
+            Response::EndBlock(x) => Ok(Self::EndBlock(x)),
             Response::Commit(x) => Ok(Self::Commit(x)),
-            Response::ExtendVote(x) => Ok(Self::ExtendVote(x)),
-            Response::VerifyVoteExtension(x) => Ok(Self::VerifyVoteExtension(x)),
-            Response::FinalizeBlock(x) => Ok(Self::FinalizeBlock(x)),
             _ => Err("wrong request type"),
         }
     }

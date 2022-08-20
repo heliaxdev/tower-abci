@@ -29,13 +29,14 @@ pub use pb::RequestQuery as Query;
 #[doc(inline)]
 pub use pb::RequestPrepareProposal as PrepareProposal;
 #[doc(inline)]
-pub use pb::RequestExtendVote as ExtendVote;
-#[doc(inline)]
-pub use pb::RequestVerifyVoteExtension as VerifyVoteExtension;
-#[doc(inline)]
 pub use pb::RequestProcessProposal as ProcessProposal;
 #[doc(inline)]
-pub use pb::RequestFinalizeBlock as FinalizeBlock;
+pub use pb::RequestBeginBlock as BeginBlock;
+#[doc(inline)]
+pub use pb::RequestDeliverTx as DeliverTx;
+#[doc(inline)]
+pub use pb::RequestEndBlock as EndBlock;
+
 
 /// An ABCI request.
 #[derive(Clone, PartialEq, Debug)]
@@ -53,9 +54,9 @@ pub enum Request {
     ApplySnapshotChunk(ApplySnapshotChunk),
     PrepareProposal(PrepareProposal),
     ProcessProposal(ProcessProposal),
-    ExtendVote(ExtendVote),
-    VerifyVoteExtension(VerifyVoteExtension),
-    FinalizeBlock(FinalizeBlock),
+    BeginBlock(BeginBlock),
+    DeliverTx(DeliverTx),
+    EndBlock(EndBlock),
 }
 
 impl Request {
@@ -68,9 +69,9 @@ impl Request {
             Commit(_) => MethodKind::Consensus,
             PrepareProposal(_) => MethodKind::Consensus,
             ProcessProposal(_) => MethodKind::Consensus,
-            ExtendVote(_) => MethodKind::Consensus,
-            VerifyVoteExtension(_) => MethodKind::Consensus,
-            FinalizeBlock(_) => MethodKind::Consensus,
+            BeginBlock(_) => MethodKind::Consensus,
+            DeliverTx(_) => MethodKind::Consensus,
+            EndBlock(_) => MethodKind::Consensus,
             CheckTx(_) => MethodKind::Mempool,
             ListSnapshots(_) => MethodKind::Snapshot,
             OfferSnapshot(_) => MethodKind::Snapshot,
@@ -102,9 +103,9 @@ impl TryFrom<pb::Request> for Request {
             Some(Value::ApplySnapshotChunk(x)) => Ok(Request::ApplySnapshotChunk(x)),
             Some(Value::PrepareProposal(x)) => Ok(Request::PrepareProposal(x)),
             Some(Value::ProcessProposal(x)) => Ok(Request::ProcessProposal(x)),
-            Some(Value::ExtendVote(x)) => Ok(Request::ExtendVote(x)),
-            Some(Value::VerifyVoteExtension(x)) => Ok(Request::VerifyVoteExtension(x)),
-            Some(Value::FinalizeBlock(x)) => Ok(Request::FinalizeBlock(x)),
+            Some(Value::BeginBlock(x)) => Ok(Request::BeginBlock(x)),
+            Some(Value::DeliverTx(x)) => Ok(Request::DeliverTx(x)),
+            Some(Value::EndBlock(x)) => Ok(Request::EndBlock(x)),
             None => Err("no request in proto"),
         }
     }
@@ -127,9 +128,9 @@ impl Into<pb::Request> for Request {
             Request::ApplySnapshotChunk(x) => Some(Value::ApplySnapshotChunk(x)),
             Request::PrepareProposal(x) => Some(Value::PrepareProposal(x)),
             Request::ProcessProposal(x) => Some(Value::ProcessProposal(x)),
-            Request::ExtendVote(x) => Some(Value::ExtendVote(x)),
-            Request::VerifyVoteExtension(x) => Some(Value::VerifyVoteExtension(x)),
-            Request::FinalizeBlock(x) => Some(Value::FinalizeBlock(x)),
+            Request::BeginBlock(x) => Some(Value::BeginBlock(x)),
+            Request::DeliverTx(x) => Some(Value::DeliverTx(x)),
+            Request::EndBlock(x) => Some(Value::EndBlock(x)),
         };
         pb::Request { value }
     }
@@ -142,9 +143,9 @@ pub enum ConsensusRequest {
     Commit(Commit),
     PrepareProposal(PrepareProposal),
     ProcessProposal(ProcessProposal),
-    ExtendVote(ExtendVote),
-    VerifyVoteExtension(VerifyVoteExtension),
-    FinalizeBlock(FinalizeBlock),
+    BeginBlock(BeginBlock),
+    DeliverTx(DeliverTx),
+    EndBlock(EndBlock),
 }
 
 impl From<ConsensusRequest> for Request {
@@ -154,9 +155,9 @@ impl From<ConsensusRequest> for Request {
             ConsensusRequest::Commit(x) => Self::Commit(x),
             ConsensusRequest::PrepareProposal(x) => Self::PrepareProposal(x),
             ConsensusRequest::ProcessProposal(x) => Self::ProcessProposal(x),
-            ConsensusRequest::ExtendVote(x) => Self::ExtendVote(x),
-            ConsensusRequest::VerifyVoteExtension(x) => Self::VerifyVoteExtension(x),
-            ConsensusRequest::FinalizeBlock(x) => Self::FinalizeBlock(x),
+            ConsensusRequest::BeginBlock(x) => Self::BeginBlock(x),
+            ConsensusRequest::DeliverTx(x) => Self::DeliverTx(x),
+            ConsensusRequest::EndBlock(x) => Self::EndBlock(x),
         }
     }
 }
@@ -169,9 +170,9 @@ impl TryFrom<Request> for ConsensusRequest {
             Request::Commit(x) => Ok(Self::Commit(x)),
             Request::PrepareProposal(x) => Ok(Self::PrepareProposal(x)),
             Request::ProcessProposal(x) => Ok(Self::ProcessProposal(x)),
-            Request::ExtendVote(x) => Ok(Self::ExtendVote(x)),
-            Request::VerifyVoteExtension(x) => Ok(Self::VerifyVoteExtension(x)),
-            Request::FinalizeBlock(x) => Ok(Self::FinalizeBlock(x)),
+            Request::BeginBlock(x) => Ok(Self::BeginBlock(x)),
+            Request::DeliverTx(x) => Ok(Self::DeliverTx(x)),
+            Request::EndBlock(x) => Ok(Self::EndBlock(x)),
             _ => Err("wrong request type"),
         }
     }

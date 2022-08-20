@@ -10,7 +10,6 @@ use std::{
 use futures::future::FutureExt;
 use structopt::StructOpt;
 use tendermint_proto::abci as pb;
-use tendermint_proto::abci::tx_record::TxAction;
 use tower::{Service, ServiceBuilder};
 
 use tower_abci::{split, BoxError, response, Request, Response, Server};
@@ -44,7 +43,6 @@ impl Service<Request> for KVStore {
                 status: 1,
                 ..Default::default()
             }),
-            Request::FinalizeBlock(_) => Response::FinalizeBlock(Default::default()),
             // unhandled messages
             Request::Echo(_) => Response::Echo(Default::default()),
             Request::Flush(_) => Response::Flush(Default::default()),
@@ -56,20 +54,13 @@ impl Service<Request> for KVStore {
             Request::ApplySnapshotChunk(_) => Response::ApplySnapshotChunk(Default::default()),
             Request::PrepareProposal(req) => {
                 Response::PrepareProposal(response::PrepareProposal{
-                    tx_records: req.txs
-                        .into_iter()
-                        .map(|tx| pb::TxRecord {
-                            action: TxAction::Unmodified as i32,
-                            tx,
-                        })
-                        .collect(),
+                    txs: req.txs,
                     ..Default::default()
                 })
             }
-            Request::ExtendVote(_) => Response::ExtendVote(response::ExtendVote{
-                vote_extension: vec![42;10]
-            }),
-            Request::VerifyVoteExtension(_) => Response::VerifyVoteExtension(Default::default()),
+            Request::BeginBlock(_) => Response::BeginBlock(Default::default()),
+            Request::DeliverTx(_) => Response::DeliverTx(Default::default()),
+            Request::EndBlock(_) => Response::EndBlock(Default::default()),
         };
         tracing::info!(?rsp);
         async move { Ok(rsp) }.boxed()
@@ -126,6 +117,7 @@ impl KVStore {
         self.height += 1;
         pb::ResponseCommit {
             retain_height,
+            data: vec![],
         }
     }
 }
