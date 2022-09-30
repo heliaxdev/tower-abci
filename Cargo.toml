@@ -8,7 +8,7 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tendermint-proto = { git = "https://github.com/heliaxdev/tendermint-rs", branch = "bat/abciplus" }
+tendermint-proto = "0.23.5"
 bytes = "1"
 tokio = { version = "1", features = ["full"]}
 tokio-util = { version = "0.6", features = ["codec"] }
@@ -23,6 +23,10 @@ tracing-tower = { git = "https://github.com/tokio-rs/tracing/", tag = "tracing-0
 [dev-dependencies]
 structopt = "0.3"
 tracing-subscriber = { git = "https://github.com/tokio-rs/tracing/", tag = "tracing-0.1.30" }
+
+[patch.crates-io]
+# patched to a commit on the `eth-bridge-integration` branch of our fork
+tendermint-proto = { git = "https://github.com/heliaxdev/tendermint-rs", rev = "bc0b6ac47b3bfc1ee8b944341b654b867b3b5d0b" }
 
 [features]
 doc = []
