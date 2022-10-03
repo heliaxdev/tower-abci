@@ -222,7 +222,7 @@ where
                                 Ok(consensus) => {
                                     let response = consensus.call(request);
                                     // Need to box here for type erasure
-                                    responses.push_back(response.map_ok(Response::from).boxed());
+                                    responses.push(response.map_ok(Response::from).boxed());
                                 },
                                 Err(err) => {
                                     tracing::error!("consensus service is not ready: {}", err);
@@ -235,7 +235,7 @@ where
                                 Ok(mempool) => {
                                     let response = mempool.call(request);
                                     // Need to box here for type erasure
-                                    responses.push_back(response.map_ok(Response::from).boxed());
+                                    responses.push(response.map_ok(Response::from).boxed());
                                 },
                                 Err(err) => {
                                     tracing::error!("mempool service is not ready: {}", err);
@@ -248,7 +248,7 @@ where
                                 Ok(snapshot) => {
                                     let response = snapshot.call(request);
                                     // Need to box here for type erasure
-                                    responses.push_back(response.map_ok(Response::from).boxed());
+                                    responses.push(response.map_ok(Response::from).boxed());
                                 },
                                 Err(err) => {
                                     tracing::error!("snapshot service is not ready: {}", err);
@@ -261,7 +261,7 @@ where
                                 Ok(info) => {
                                     let response = info.call(request);
                                     // Need to box here for type erasure
-                                    responses.push_back(response.map_ok(Response::from).boxed());
+                                    responses.push(response.map_ok(Response::from).boxed());
                                 },
                                 Err(err) => {
                                     tracing::error!("info service is not ready: {}", err);
