@@ -17,7 +17,7 @@ tower = { version = "0.4", features = ["full"]}
 pin-project = "1"
 futures = "0.3"
 tracing = { git = "https://github.com/tokio-rs/tracing/", tag = "tracing-0.1.30" }
-prost = "0.9.0"
+prost = "0.11"
 tracing-tower = { git = "https://github.com/tokio-rs/tracing/", tag = "tracing-0.1.30" }
 
 [dev-dependencies]
