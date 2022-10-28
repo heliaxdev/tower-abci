@@ -26,7 +26,7 @@ tracing-subscriber = { git = "https://github.com/tokio-rs/tracing/", tag = "trac
 
 [patch.crates-io]
 # patched to a commit on the `eth-bridge-integration` branch of our fork
-tendermint-proto = { git = "https://github.com/heliaxdev/tendermint-rs", rev = "bc0b6ac47b3bfc1ee8b944341b654b867b3b5d0b" }
+tendermint-proto = { git = "https://github.com/heliaxdev/tendermint-rs", rev = "7c6a483218c8e897189c6af17939e154878597a5" }
 
 [features]
 doc = []
