@@ -8,7 +8,7 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tendermint-proto = { git = "https://github.com/heliaxdev/tendermint-rs", rev = "f8f019217130f36eecafac2ad11e35f5bda2ecab" }
+tendermint-proto = { git = "https://github.com/heliaxdev/tendermint-rs", rev = "a2cd889ae706854e7bf476880a37408d75b4a8e1" }
 bytes = "1"
 tokio = { version = "1", features = ["full"]}
 tokio-util = { version = "0.6", features = ["codec"] }
@@ -17,7 +17,7 @@ tower = { version = "0.4", features = ["full"]}
 pin-project = "1"
 futures = "0.3"
 tracing = { git = "https://github.com/tokio-rs/tracing/", tag = "tracing-0.1.30" }
-prost = "0.9.0"
+prost = "0.11.0"
 tracing-tower = { git = "https://github.com/tokio-rs/tracing/", tag = "tracing-0.1.30" }
 
 [dev-dependencies]
