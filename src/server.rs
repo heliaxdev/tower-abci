@@ -191,7 +191,7 @@ where
     // XXX handle errors gracefully
     // figure out how / if to return errors to tendermint
     async fn run(mut self, mut socket: TcpStream) -> Result<(), BoxError> {
-        tracing::info!("listening for requests");
+        println!("XXX listening for requests");
 
         use tendermint_proto::abci as pb;
 
@@ -214,7 +214,7 @@ where
                         None => return Ok(()),
                     };
                     let request = Request::try_from(proto)?;
-                    tracing::debug!(?request, "new request");
+                    println!("XXX new request, kind {:?}", request.kind());
                     match request.kind() {
                         MethodKind::Consensus => {
                             let request = request.try_into().expect("checked kind");
@@ -271,13 +271,14 @@ where
                         MethodKind::Flush => {
                             // Instead of propagating Flush requests to the application,
                             // handle them here by awaiting all pending responses.
-                            tracing::debug!(responses.len = responses.len(), "flushing responses");
+                            println!("To flush {}", responses.len());
                             while let Some(response) = responses.next().await {
                                 // XXX: sometimes we might want to send errors to tendermint
                                 // https://docs.tendermint.com/v0.32/spec/abci/abci.html#errors
-                                tracing::debug!(?response, "flushing response");
+                                println!("XXX flushing response");
                                 response_sink.send(response?.into()).await?;
                             }
+                            println!("XXX done flushing responses");
                             // Now we need to tell Tendermint we've flushed responses
                             response_sink.send(Response::Flush(Default::default()).into()).await?;
                         }
@@ -287,7 +288,7 @@ where
                     let response = rsp.expect("didn't poll when responses was empty");
                     // XXX: sometimes we might want to send errors to tendermint
                     // https://docs.tendermint.com/v0.32/spec/abci/abci.html#errors
-                    tracing::debug!(?response, "sending response");
+                    println!("XXX sending response");
                     response_sink.send(response?.into()).await?;
                 }
             }
