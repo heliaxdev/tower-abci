@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use tendermint_proto::abci as pb;
+use tendermint_proto::v0_37::abci as pb;
 
 #[doc(inline)]
 pub use pb::ResponseApplySnapshotChunk as ApplySnapshotChunk;

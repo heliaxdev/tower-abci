@@ -193,7 +193,7 @@ where
     async fn run(mut self, mut socket: TcpStream) -> Result<(), BoxError> {
         tracing::info!("listening for requests");
 
-        use tendermint_proto::abci as pb;
+        use tendermint_proto::v0_37::abci as pb;
 
         let (mut request_stream, mut response_sink) = {
             use crate::codec::{Decode, Encode};
