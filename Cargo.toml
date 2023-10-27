@@ -19,6 +19,7 @@ futures = "0.3"
 tracing = { git = "https://github.com/tokio-rs/tracing/", tag = "tracing-0.1.30" }
 prost = "0.11.0"
 tracing-tower = { git = "https://github.com/tokio-rs/tracing/", tag = "tracing-0.1.30" }
+backoff = { version = "0.4.0", features = ["tokio"] }
 
 [dev-dependencies]
 structopt = "0.3"

@@ -26,6 +26,7 @@ mod codec;
 pub type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 /// A category of ABCI method.
+#[derive(Debug)]
 pub enum MethodKind {
     Consensus,
     Mempool,
