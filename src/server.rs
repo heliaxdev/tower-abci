@@ -190,7 +190,8 @@ where
                                         }
                                         Ok(e) => {
                                             tracing::warn!("Service overloaded - backing off");
-                                            return Err(backoff::Error::transient(e));
+                                            return Err(backoff::Error::Permanent(e));
+                                            // return Err(backoff::Error::transient(e));
                                         }
                                     }
                                 }
