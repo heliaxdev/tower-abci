@@ -1,7 +1,7 @@
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 
-use backoff::ExponentialBackoff;
+use backoff::{Error, ExponentialBackoff};
 use futures::future::{FutureExt, TryFutureExt};
 use futures::sink::SinkExt;
 use futures::stream::{FuturesOrdered, StreamExt};
@@ -162,51 +162,37 @@ where
         tracing::info!(?local_addr, "bound tcp listener");
 
         loop {
+
             // set parent: None for the connection span, as it should
             // exist independently of the listener's spans.
             // let span = tracing::span!(parent: None, Level::ERROR, "abci", ?addr);
-
-            let server = self.clone();
             let listener_clone = listener.clone();
+            let conn = Connection {
+                consensus: self.consensus.clone(),
+                mempool: self.mempool.clone(),
+                info: self.info.clone(),
+                snapshot: self.snapshot.clone(),
+            };
             tokio::spawn(async move {
-                let s = server.clone();
                 backoff::future::retry::<_, BoxError, _, _, _>(
                     ExponentialBackoff::default(),
                     || async {
                         match listener_clone.accept().await {
                             Ok((socket, _addr)) => {
-                                let conn = Connection {
-                                    consensus: s.consensus.clone(),
-                                    mempool: s.mempool.clone(),
-                                    info: s.info.clone(),
-                                    snapshot: s.snapshot.clone(),
-                                };
-
-                                if let Err(e) = conn.run(socket).await {
-                                    match e.downcast::<tower::load_shed::error::Overloaded>() {
-                                        Err(e) => {
-                                            tracing::error!({ %e }, "error in a connection handler");
-                                            return Err(backoff::Error::Permanent(e));
-                                        }
-                                        Ok(e) => {
-                                            tracing::warn!("Service overloaded - backing off");
-                                            return Err(backoff::Error::Permanent(e));
-                                            // return Err(backoff::Error::transient(e));
-                                        }
-                                    }
+                                if let Err(e) = conn.clone().run(socket).await {
+                                    Err(backoff::Error::Permanent(e))
+                                } else {
+                                    Ok(())
                                 }
-                                Ok(())
                             }
                             Err(e) => {
                                 tracing::error!({ %e }, "error accepting new tcp connection");
                                 Ok(())
                             }
                         }
-                    },
-                )
-                .await
+                    }
+                );
             });
-            // .instrument(span);
         }
     }
 }
