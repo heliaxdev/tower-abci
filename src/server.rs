@@ -180,16 +180,17 @@ where
                         match listener_clone.accept().await {
                             Ok((socket, _addr)) => {
                                 if let Err(e) = conn.clone().run(socket).await {
-                                    match e.downcast::<tower::load_shed::error::Overloaded>() {
-                                        Err(e) => {
-                                            tracing::error!({ %e }, "error in a connection handler");
-                                            return Err(backoff::Error::Permanent(e))
-                                        }
-                                        Ok(e) => {
-                                            tracing::warn!("Service overloaded - backing off");
-                                            return Err(backoff::Error::transient(e));
-                                        }
-                                    }
+                                    return Err(backoff::Error::Permanent(e))
+                                    // match e.downcast::<tower::load_shed::error::Overloaded>() {
+                                    //     Err(e) => {
+                                    //         tracing::error!({ %e }, "error in a connection handler");
+                                    //         return Err(backoff::Error::Permanent(e))
+                                    //     }
+                                    //     Ok(e) => {
+                                    //         tracing::warn!("Service overloaded - backing off");
+                                    //         return Err(backoff::Error::transient(e));
+                                    //     }
+                                    // }
                                 } else {
                                     Ok(())
                                 }
@@ -200,7 +201,7 @@ where
                             }
                         }
                     }
-                ).await;
+                ).await
             });
         }
     }
