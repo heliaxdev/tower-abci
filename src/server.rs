@@ -173,36 +173,55 @@ where
                 info: self.info.clone(),
                 snapshot: self.snapshot.clone(),
             };
-            tokio::spawn(async move {
-                backoff::future::retry::<_, BoxError, _, _, _>(
-                    ExponentialBackoff::default(),
-                    || async {
-                        match listener_clone.accept().await {
-                            Ok((socket, _addr)) => {
-                                if let Err(e) = conn.clone().run(socket).await {
-                                    return Err(backoff::Error::Permanent(e))
-                                    // match e.downcast::<tower::load_shed::error::Overloaded>() {
-                                    //     Err(e) => {
-                                    //         tracing::error!({ %e }, "error in a connection handler");
-                                    //         return Err(backoff::Error::Permanent(e))
-                                    //     }
-                                    //     Ok(e) => {
-                                    //         tracing::warn!("Service overloaded - backing off");
-                                    //         return Err(backoff::Error::transient(e));
-                                    //     }
-                                    // }
-                                } else {
-                                    Ok(())
-                                }
-                            }
-                            Err(e) => {
-                                tracing::error!({ %e }, "error accepting new tcp connection");
-                                Ok(())
-                            }
-                        }
-                    }
-                ).await
-            });
+            match listener.accept().await {
+                Ok((socket, addr)) => {
+                    // set parent: None for the connection span, as it should
+                    // exist independently of the listener's spans.
+                    let span = tracing::span!(parent: None, Level::ERROR, "abci", ?addr);
+                    let conn = Connection {
+                        consensus: self.consensus.clone(),
+                        mempool: self.mempool.clone(),
+                        info: self.info.clone(),
+                        snapshot: self.snapshot.clone(),
+                    };
+                    tokio::spawn(async move { conn.run(socket).await.unwrap() }.instrument(span));
+                }
+                Err(e) => {
+                    tracing::warn!({ %e }, "error accepting new tcp connection");
+                }
+            }
+
+            // tokio::spawn(async move {
+            //     backoff::future::retry::<_, BoxError, _, _, _>(
+            //         ExponentialBackoff::default(),
+            //         || async {
+            //             match listener_clone.accept().await {
+            //                 Ok((socket, _addr)) => {
+            //                     if let Err(e) = conn.clone().run(socket).await {
+            //                         return Err(backoff::Error::Permanent(e))
+            //                         // match e.downcast::<tower::load_shed::error::Overloaded>() {
+            //                         //     Err(e) => {
+            //                         //         tracing::error!({ %e }, "error in a connection handler");
+            //                         //         return Err(backoff::Error::Permanent(e))
+            //                         //     }
+            //                         //     Ok(e) => {
+            //                         //         tracing::warn!("Service overloaded - backing off");
+            //                         //         return Err(backoff::Error::transient(e));
+            //                         //     }
+            //                         // }
+            //                     } else {
+            //                         Ok(())
+            //                     }
+            //                 }
+            //                 Err(e) => {
+            //                     tracing::error!({ %e }, "error accepting new tcp connection");
+            //                     Ok(())
+            //                 }
+            //             }
+            //         }
+            //     ).await
+            // });
+
         }
     }
 }
