@@ -173,27 +173,34 @@ where
                 info: self.info.clone(),
                 snapshot: self.snapshot.clone(),
             };
-            tokio::spawn(async move {
-                backoff::future::retry::<_, BoxError, _, _, _>(
-                    ExponentialBackoff::default(),
-                    || async {
-
-                        match listener_clone.accept().await {
-                            Ok((socket, addr)) => {
-                                if let Err(e) = conn.clone().run(socket).await {
-                                    Err(backoff::Error::Permanent(e))
-                                } else {
-                                    Ok(())
+            match listener.accept().await {
+                Ok((socket, addr)) => {
+                    tokio::spawn(async move {
+                        backoff::future::retry::<_, BoxError, _, _, _>(
+                            ExponentialBackoff::default(),
+                            || async {
+                                match listener_clone.accept().await {
+                                    Ok((socket, _addr)) => {
+                                        if let Err(e) = conn.clone().run(socket).await {
+                                            Err(backoff::Error::Permanent(e))
+                                        } else {
+                                            Ok(())
+                                        }
+                                    }
+                                    Err(e) => {
+                                        // tracing::warn!({ %e }, "error accepting new tcp connection");
+                                        Ok(())
+                                    }
                                 }
                             }
-                            Err(e) => {
-                                tracing::warn!({ %e }, "error accepting new tcp connection");
-                                Ok(())
-                            }
-                        }
-                    }
-                ).await
-            });
+                        ).await
+                    });
+                }
+                Err(e) => {
+                    tracing::warn!({ %e }, "error accepting new tcp connection");
+                }
+            }
+
             //.instrument(span));
 
             // match listener.accept().await {
