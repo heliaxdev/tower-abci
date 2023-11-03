@@ -173,41 +173,46 @@ where
                 info: self.info.clone(),
                 snapshot: self.snapshot.clone(),
             };
-            match listener.accept().await {
-                Ok((socket, addr)) => {
-                    // set parent: None for the connection span, as it should
-                    // exist independently of the listener's spans.
-                    let span = tracing::span!(parent: None, Level::ERROR, "abci", ?addr);
-                    let conn = Connection {
-                        consensus: self.consensus.clone(),
-                        mempool: self.mempool.clone(),
-                        info: self.info.clone(),
-                        snapshot: self.snapshot.clone(),
-                    };
-                    tokio::spawn(async move {
-                        backoff::future::retry::<_, BoxError, _, _, _>(
-                            ExponentialBackoff::default(),
-                            || async {
-                                match listener_clone.accept().await {
-                                    Ok((socket, _addr)) => {
-                                        if let Err(e) = conn.clone().run(socket).await {
-                                            Err(backoff::Error::Permanent(e))
-                                        } else {
-                                            Ok(())
-                                        }
-                                    }
-                                    Err(e) => {
-                                        Ok(())
-                                    }
+            tokio::spawn(async move {
+                backoff::future::retry::<_, BoxError, _, _, _>(
+                    ExponentialBackoff::default(),
+                    || async {
+
+                        match listener_clone.accept().await {
+                            Ok((socket, addr)) => {
+                                if let Err(e) = conn.clone().run(socket).await {
+                                    Err(backoff::Error::Permanent(e))
+                                } else {
+                                    Ok(())
                                 }
                             }
-                        ).await
-                    }.instrument(span));
-                }
-                Err(e) => {
-                    tracing::warn!({ %e }, "error accepting new tcp connection");
-                }
-            }
+                            Err(e) => {
+                                tracing::warn!({ %e }, "error accepting new tcp connection");
+                                Ok(())
+                            }
+                        }
+                    }
+                ).await
+            });
+            //.instrument(span));
+
+            // match listener.accept().await {
+            //
+            //     Ok((socket, addr)) => {
+            //         // set parent: None for the connection span, as it should
+            //         // exist independently of the listener's spans.
+            //         let span = tracing::span!(parent: None, Level::ERROR, "abci", ?addr);
+            //         let conn = Connection {
+            //             consensus: self.consensus.clone(),
+            //             mempool: self.mempool.clone(),
+            //             info: self.info.clone(),
+            //             snapshot: self.snapshot.clone(),
+            //         };
+            //     }
+            //     Err(e) => {
+            //         tracing::warn!({ %e }, "error accepting new tcp connection");
+            //     }
+            // }
 
             // tokio::spawn(async move {
             //     backoff::future::retry::<_, BoxError, _, _, _>(
