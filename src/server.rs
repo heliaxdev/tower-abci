@@ -184,7 +184,25 @@ where
                         info: self.info.clone(),
                         snapshot: self.snapshot.clone(),
                     };
-                    tokio::spawn(async move { conn.run(socket).await.unwrap() }.instrument(span));
+                    tokio::spawn(async move {
+                        backoff::future::retry::<_, BoxError, _, _, _>(
+                            ExponentialBackoff::default(),
+                            || async {
+                                match listener_clone.accept().await {
+                                    Ok((socket, _addr)) => {
+                                        if let Err(e) = conn.clone().run(socket).await {
+                                            Err(backoff::Error::Permanent(e))
+                                        } else {
+                                            Ok(())
+                                        }
+                                    }
+                                    Err(e) => {
+                                        Ok(())
+                                    }
+                                }
+                            }
+                        ).await
+                    }.instrument(span));
                 }
                 Err(e) => {
                     tracing::warn!({ %e }, "error accepting new tcp connection");
