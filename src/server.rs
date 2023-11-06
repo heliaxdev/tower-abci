@@ -270,14 +270,15 @@ where
                     };
                     let request = Request::try_from(proto)?;
                     tracing::debug!(?request, "new request");
-                    match request.kind() {
+                    let kind = request.kind();
+                    match &kind {
                         MethodKind::Consensus => {
                             let request = request.try_into().expect("checked kind");
                             match self.consensus.ready().await {
                                 Ok(consensus) => {
                                     let response = consensus.call(request);
                                     // Need to box here for type erasure
-                                    responses.push_back(response.map_ok(Response::from).boxed());
+                                    responses.push_back(response.map_ok(Response::from).map(|r| (r, kind)).boxed());
                                 },
                                 Err(err) => {
                                     tracing::error!("consensus service is not ready: {}", err);
@@ -290,7 +291,7 @@ where
                                 Ok(mempool) => {
                                     let response = mempool.call(request);
                                     // Need to box here for type erasure
-                                    responses.push_back(response.map_ok(Response::from).boxed());
+                                    responses.push_back(response.map_ok(Response::from).map(|r| (r, kind)).boxed());
                                 },
                                 Err(err) => {
                                     tracing::error!("mempool service is not ready: {}", err);
@@ -303,7 +304,7 @@ where
                                 Ok(snapshot) => {
                                     let response = snapshot.call(request);
                                     // Need to box here for type erasure
-                                    responses.push_back(response.map_ok(Response::from).boxed());
+                                    responses.push_back(response.map_ok(Response::from).map(|r| (r, kind)).boxed());
                                 },
                                 Err(err) => {
                                     tracing::error!("snapshot service is not ready: {}", err);
@@ -316,7 +317,7 @@ where
                                 Ok(info) => {
                                     let response = info.call(request);
                                     // Need to box here for type erasure
-                                    responses.push_back(response.map_ok(Response::from).boxed());
+                                    responses.push_back(response.map_ok(Response::from).map(|r| (r, kind)).boxed());
                                 },
                                 Err(err) => {
                                     tracing::error!("info service is not ready: {}", err);
@@ -327,11 +328,18 @@ where
                             // Instead of propagating Flush requests to the application,
                             // handle them here by awaiting all pending responses.
                             tracing::debug!(responses.len = responses.len(), "flushing responses");
-                            while let Some(response) = responses.next().await {
-                                // XXX: sometimes we might want to send errors to tendermint
-                                // https://docs.tendermint.com/v0.32/spec/abci/abci.html#errors
+                            while let Some((response, kind)) = responses.next().await {
                                 tracing::debug!(?response, "flushing response");
-                                response_sink.send(response?.into()).await?;
+                                let response = match response {
+                                    Ok(rsp) => rsp,
+                                    Err(err) => match kind {
+                                        // TODO: allow to fail on Snapshot?
+                                        MethodKind::Info =>
+                                            Response::Exception(pb::ResponseException { error: err.to_string() }),
+                                        _ => return Err(err)
+                                    }
+                                };
+                                response_sink.send(response.into()).await?;
                             }
                             // Allow to peek next request if none of the `response?` above failed ...
                             peeked_req = false;
@@ -343,13 +351,20 @@ where
                     }
                 }
                 rsp = responses.next(), if !responses.is_empty() => {
-                    let response = rsp.expect("didn't poll when responses was empty")?;
+                    let (rsp, kind) = rsp.expect("didn't poll when responses was empty");
+                    let response = match rsp {
+                        Ok(rsp) => rsp,
+                        Err(err) => match kind {
+                            // TODO: allow to fail on Snapshot?
+                            MethodKind::Info =>
+                                Response::Exception(pb::ResponseException { error: err.to_string() }),
+                            _ => return Err(err)
+                        }
+                    };
                     // Allow to peek next request if the `?` above didn't fail ...
                     peeked_req = false;
                     // ... and pop the last peeked request
                     pinned_stream.next().await.unwrap()?;
-                    // XXX: sometimes we might want to send errors to tendermint
-                    // https://docs.tendermint.com/v0.32/spec/abci/abci.html#errors
                     tracing::debug!(?response, "sending response");
                     response_sink.send(response.into()).await?;
                 }
