@@ -1,8 +1,12 @@
 use std::convert::{TryFrom, TryInto};
+use std::pin::Pin;
+use std::sync::Arc;
 
+use backoff::ExponentialBackoff;
 use futures::future::{FutureExt, TryFutureExt};
 use futures::sink::SinkExt;
 use futures::stream::{FuturesOrdered, StreamExt};
+use tokio::sync::Mutex;
 use tokio::{
     net::{TcpListener, TcpStream, ToSocketAddrs},
     select,
@@ -122,18 +126,25 @@ impl<C, M, I, S> Server<C, M, I, S>
 where
     C: Service<ConsensusRequest, Response = ConsensusResponse, Error = BoxError>
         + Send
+        + Sync
         + Clone
         + 'static,
     C::Future: Send + 'static,
     M: Service<MempoolRequest, Response = MempoolResponse, Error = BoxError>
         + Send
+        + Sync
         + Clone
         + 'static,
     M::Future: Send + 'static,
-    I: Service<InfoRequest, Response = InfoResponse, Error = BoxError> + Send + Clone + 'static,
+    I: Service<InfoRequest, Response = InfoResponse, Error = BoxError>
+        + Send
+        + Sync
+        + Clone
+        + 'static,
     I::Future: Send + 'static,
     S: Service<SnapshotRequest, Response = SnapshotResponse, Error = BoxError>
         + Send
+        + Sync
         + Clone
         + 'static,
     S::Future: Send + 'static,
@@ -160,7 +171,10 @@ where
                         info: self.info.clone(),
                         snapshot: self.snapshot.clone(),
                     };
-                    tokio::spawn(async move { conn.run(socket).await.unwrap() }.instrument(span));
+                    tokio::spawn(
+                        async move { conn.run_with_backoff(socket).await.unwrap() }
+                            .instrument(span),
+                    );
                 }
                 Err(e) => {
                     tracing::warn!({ %e }, "error accepting new tcp connection");
@@ -170,6 +184,7 @@ where
     }
 }
 
+#[derive(Clone)]
 struct Connection<C, M, I, S> {
     consensus: C,
     mempool: M,
@@ -179,18 +194,52 @@ struct Connection<C, M, I, S> {
 
 impl<C, M, I, S> Connection<C, M, I, S>
 where
-    C: Service<ConsensusRequest, Response = ConsensusResponse, Error = BoxError> + Send + 'static,
+    C: Service<ConsensusRequest, Response = ConsensusResponse, Error = BoxError>
+        + Clone
+        + Send
+        + 'static,
     C::Future: Send + 'static,
-    M: Service<MempoolRequest, Response = MempoolResponse, Error = BoxError> + Send + 'static,
+    M: Service<MempoolRequest, Response = MempoolResponse, Error = BoxError>
+        + Clone
+        + Send
+        + 'static,
+    C: Service<ConsensusRequest, Response = ConsensusResponse, Error = BoxError>
+        + Clone
+        + Send
+        + 'static,
     M::Future: Send + 'static,
-    I: Service<InfoRequest, Response = InfoResponse, Error = BoxError> + Send + 'static,
+    I: Service<InfoRequest, Response = InfoResponse, Error = BoxError> + Clone + Send + 'static,
     I::Future: Send + 'static,
-    S: Service<SnapshotRequest, Response = SnapshotResponse, Error = BoxError> + Send + 'static,
+    S: Service<SnapshotRequest, Response = SnapshotResponse, Error = BoxError>
+        + Clone
+        + Send
+        + 'static,
     S::Future: Send + 'static,
 {
-    // XXX handle errors gracefully
-    // figure out how / if to return errors to tendermint
-    async fn run(mut self, mut socket: TcpStream) -> Result<(), BoxError> {
+    async fn run_with_backoff(self, socket: TcpStream) -> Result<(), BoxError> {
+        let socket = Arc::new(Mutex::new(socket));
+        backoff::future::retry::<_, BoxError, _, _, _>(ExponentialBackoff::default(), || async {
+            let mut socket = socket.lock().await;
+            let run_result = self.clone().run(&mut socket).await;
+
+            if let Err(e) = run_result {
+                match e.downcast::<tower::load_shed::error::Overloaded>() {
+                    Err(e) => {
+                        tracing::error!("error {e} in a connection handler");
+                        return Err(backoff::Error::Permanent(e));
+                    }
+                    Ok(e) => {
+                        tracing::warn!("a service is overloaded - backing off");
+                        return Err(backoff::Error::transient(e));
+                    }
+                }
+            }
+            Ok(())
+        })
+        .await
+    }
+
+    async fn run(mut self, socket: &mut TcpStream) -> Result<(), BoxError> {
         tracing::info!("listening for requests");
 
         use tendermint_proto::abci as pb;
@@ -199,18 +248,24 @@ where
             use crate::codec::{Decode, Encode};
             let (read, write) = socket.split();
             (
-                FramedRead::new(read, Decode::<pb::Request>::default()),
+                FramedRead::new(read, Decode::<pb::Request>::default()).peekable(),
                 FramedWrite::new(write, Encode::<pb::Response>::default()),
             )
         };
-
+        let mut pinned_stream = Pin::new(&mut request_stream);
         let mut responses = FuturesOrdered::new();
 
+        // We only peek the next request once it's popped from the request_stream
+        // to avoid crashing Tendermint in case the service call fails because
+        // it's e.g. overloaded.
+        let mut peeked_req = false;
         loop {
             select! {
-                req = request_stream.next() => {
-                    let proto = match req.transpose()? {
-                        Some(proto) => proto,
+                req = pinned_stream.as_mut().peek(), if !peeked_req => {
+                    peeked_req = true;
+                    let proto = match req {
+                        Some(Ok(proto)) => proto.clone(),
+                        Some(Err(_)) => return Err(pinned_stream.next().await.unwrap().unwrap_err()),
                         None => return Ok(()),
                     };
                     let request = Request::try_from(proto)?;
@@ -278,17 +333,25 @@ where
                                 tracing::debug!(?response, "flushing response");
                                 response_sink.send(response?.into()).await?;
                             }
+                            // Allow to peek next request if none of the `response?` above failed ...
+                            peeked_req = false;
+                            // ... and pop the last peeked request
+                            pinned_stream.next().await.unwrap()?;
                             // Now we need to tell Tendermint we've flushed responses
                             response_sink.send(Response::Flush(Default::default()).into()).await?;
                         }
                     }
                 }
                 rsp = responses.next(), if !responses.is_empty() => {
-                    let response = rsp.expect("didn't poll when responses was empty");
+                    let response = rsp.expect("didn't poll when responses was empty")?;
+                    // Allow to peek next request if the `?` above didn't fail ...
+                    peeked_req = false;
+                    // ... and pop the last peeked request
+                    pinned_stream.next().await.unwrap()?;
                     // XXX: sometimes we might want to send errors to tendermint
                     // https://docs.tendermint.com/v0.32/spec/abci/abci.html#errors
                     tracing::debug!(?response, "sending response");
-                    response_sink.send(response?.into()).await?;
+                    response_sink.send(response.into()).await?;
                 }
             }
         }
